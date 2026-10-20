@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Count the Stars: The Journey of Abraham</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#0d1330; --night2:#1b2550; --sand:#e9d8b4; --parch:#f6ecd4; --parch2:#efe0bd;
+    --ink:#2b2116; --ink2:#5c4a33; --gold:#e8b64a; --gold2:#c9922a; --red:#a8432e; --green:#4f7a3a;
+    --head:'Cinzel', Georgia, serif; --body:'Crimson Pro', Georgia, 'Times New Roman', serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{
+    font-family:var(--body); color:var(--ink); font-size:19px; line-height:1.5;
+    background:radial-gradient(ellipse at 50% 120%, #3a2f52 0%, var(--night2) 35%, var(--night) 75%);
+    background-attachment:fixed; min-height:100vh; overflow-x:hidden;
+  }
+  #sky{position:fixed;inset:0;pointer-events:none;z-index:0}
+  .tw{position:absolute;border-radius:50%;background:#fff;animation:tw 3s infinite ease-in-out}
+  @keyframes tw{0%,100%{opacity:.25}50%{opacity:1}}
+  .wrap{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:18px 16px 80px}
+
+  /* HUD */
+  .hud{display:none;gap:12px;align-items:center;justify-content:space-between;color:var(--sand);margin-bottom:10px;flex-wrap:wrap}
+  .hud.on{display:flex}
+  .meter{display:flex;align-items:center;gap:8px;font-family:var(--head);font-size:14px;letter-spacing:.05em}
+  .bar{width:140px;height:14px;border-radius:8px;background:rgba(255,255,255,.12);overflow:hidden;border:1px solid rgba(255,255,255,.25)}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#d0702a,var(--gold),#fff2b8);transition:width .6s}
+  .starcount{font-family:var(--head);font-size:16px;display:flex;align-items:center;gap:6px}
+  .starcount b{color:var(--gold);font-size:20px;display:inline-block;transition:transform .2s}
+  .starcount b.bump{transform:scale(1.6)}
+  .flystar{position:fixed;z-index:30;font-size:46px;color:var(--gold);pointer-events:none;
+    text-shadow:0 0 18px #ffd86a;transition:transform .85s cubic-bezier(.5,-0.4,.6,1),opacity .85s;transform-origin:center}
+
+  .trail{display:none;position:relative;margin:0 0 14px;padding:8px 6px 2px;overflow-x:auto}
+  .trail.on{display:block}
+  .trail ol{list-style:none;margin:0;padding:0;display:flex;justify-content:space-between;min-width:560px;position:relative}
+  .trail ol:before{content:"";position:absolute;top:9px;left:14px;right:14px;border-top:2px dashed rgba(233,216,180,.35)}
+  .trail li{position:relative;text-align:center;flex:1;font-size:12px;color:rgba(233,216,180,.55);font-family:var(--head);letter-spacing:.03em}
+  .trail li .dot{display:block;width:18px;height:18px;margin:0 auto 4px;border-radius:50%;background:var(--night2);border:2px solid rgba(233,216,180,.4);position:relative;z-index:1;transition:all .4s}
+  .trail li.done .dot{background:var(--gold2);border-color:var(--gold)}
+  .trail li.here{color:var(--gold)}
+  .trail li.here .dot{background:var(--gold);border-color:#fff;box-shadow:0 0 12px var(--gold)}
+
+  /* Card */
+  .card{background:linear-gradient(180deg,var(--parch),var(--parch2));border-radius:14px;padding:26px 26px 22px;overflow:hidden;
+    box-shadow:0 20px 50px rgba(0,0,0,.45), inset 0 0 0 1px rgba(120,90,40,.25), inset 0 0 60px rgba(160,120,60,.18);
+    animation:rise .5s ease-out}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .scene,.mapsvg{display:block;width:calc(100% + 52px);height:auto;margin:-26px -26px 18px;border-bottom:3px solid rgba(120,90,40,.35)}
+  .eyebrow{font-family:var(--head);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold2)}
+  h1,h2,h3{font-family:var(--head);margin:.2em 0 .4em;line-height:1.2;color:var(--ink)}
+  h1{font-size:clamp(30px,6vw,50px);text-align:center}
+  h2{font-size:clamp(24px,4.5vw,32px)}
+  h3{font-size:18px;letter-spacing:.04em}
+  p{margin:0 0 .8em}
+  .prompt{font-weight:600;font-size:20px;margin-top:14px;border-top:1px solid rgba(120,90,40,.25);padding-top:14px}
+
+  .choices{display:grid;gap:10px;margin-top:10px}
+  .choice{font:inherit;font-size:18px;text-align:left;padding:12px 16px;border-radius:10px;cursor:pointer;
+    background:#fffaf0;border:1.5px solid rgba(120,90,40,.35);color:var(--ink);transition:all .15s;display:flex;gap:10px;align-items:center}
+  .choice:hover:not(:disabled){border-color:var(--gold2);transform:translateX(4px);background:#fff;box-shadow:0 4px 12px rgba(120,90,40,.15)}
+  .choice:disabled{cursor:default;opacity:.55}
+  .choice.pick{opacity:1;border-width:2px}
+  .choice.good{border-color:var(--green);background:#eef5e6;opacity:1}
+  .choice.bad{border-color:var(--red);background:#f8e7e2;opacity:1}
+  .choice .k{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--head);font-size:15px;
+    background:var(--night);color:var(--gold)}
+
+  .reveal{margin-top:16px;animation:rise .45s ease-out}
+  .verdict{font-family:var(--head);font-size:17px;margin-bottom:6px}
+  .verdict.good{color:var(--green)} .verdict.bad{color:var(--red)}
+  .what{background:rgba(255,255,255,.5);border-left:4px solid var(--gold2);padding:12px 14px;border-radius:0 8px 8px 0;margin:10px 0}
+  .what h3{margin-top:0;font-size:15px;color:var(--ink2)}
+  .verse{margin:14px 0 6px;padding:18px 20px 14px;border-radius:10px;color:var(--sand);position:relative;overflow:hidden;
+    background:radial-gradient(ellipse at 85% 0%, #2c3a78 0%, var(--night) 70%)}
+  .verse:before{content:"★";position:absolute;right:14px;top:6px;font-size:28px;color:var(--gold);opacity:.5}
+  .verse .vt{display:block;font-style:italic;font-size:20px;padding-right:26px}
+  .verse cite{display:block;margin-top:6px;font-style:normal;font-family:var(--head);font-size:13px;letter-spacing:.08em;color:var(--gold)}
+  .verse small{display:block;margin-top:8px;font-size:11.5px;line-height:1.35;color:rgba(233,216,180,.6)}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:14px}
+  .niv{font-family:var(--head);font-size:13px;letter-spacing:.06em;color:var(--ink2);text-decoration:none;border-bottom:1px dotted var(--ink2)}
+  .niv:hover{color:var(--gold2);border-color:var(--gold2)}
+
+  .btn{font-family:var(--head);font-size:16px;letter-spacing:.06em;padding:12px 22px;border-radius:30px;border:none;cursor:pointer;
+    background:linear-gradient(180deg,var(--gold),var(--gold2));color:#2a1b06;box-shadow:0 4px 0 #8a6219, 0 8px 18px rgba(0,0,0,.25);transition:transform .1s}
+  .btn:hover{transform:translateY(-2px)} .btn:active{transform:translateY(2px);box-shadow:0 2px 0 #8a6219}
+
+  .quizhead{display:flex;align-items:center;gap:12px}
+  .quizhead .s{font-size:34px;color:var(--gold2);animation:pulse 2.6s infinite}
+  .maptxt{font-size:19px}
+  .maptxt b{font-family:var(--head)}
+
+  /* Title */
+  .title{text-align:center}
+  .title .sub{font-family:var(--head);letter-spacing:.3em;font-size:13px;color:var(--gold2)}
+  .title p{max-width:580px;margin:12px auto;font-size:20px}
+  .title .tiny{font-size:15px;color:var(--ink2)}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+
+  /* Ending */
+  .rank{text-align:center}
+  .rank .r{font-family:var(--head);font-size:30px;color:var(--gold2)}
+  .scores{display:flex;justify-content:center;gap:34px;margin:8px 0 12px;font-family:var(--head)}
+  .scores b{display:block;font-size:32px;color:var(--ink)}
+  .scores small{font-size:12px;letter-spacing:.1em;color:var(--ink2)}
+  .discuss li{margin-bottom:8px}
+  .mute{position:fixed;right:14px;bottom:14px;z-index:5;background:rgba(13,19,48,.75);color:var(--sand);border:1px solid rgba(233,216,180,.4);border-radius:30px;padding:8px 14px;font-family:var(--head);font-size:12px;cursor:pointer}
+
+  /* scene animations */
+  .twk{animation:tw 3s infinite ease-in-out}
+  .spin{animation:spin 80s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .smoke{transform-box:fill-box;transform-origin:center;animation:smk 4.5s infinite ease-out;opacity:0}
+  @keyframes smk{0%{transform:translateY(0) scale(.5);opacity:0}20%{opacity:.55}100%{transform:translateY(-130px) scale(1.7);opacity:0}}
+  .shimmer{animation:shim 2.4s infinite ease-in-out}
+  @keyframes shim{50%{opacity:.25}}
+  .bob{animation:bob .9s infinite ease-in-out}
+  @keyframes bob{50%{transform:translateY(-2px)}}
+  .flt{transform-box:fill-box;animation:flt 3.2s infinite ease-in-out;opacity:0}
+  @keyframes flt{0%{transform:translateY(8px);opacity:0}40%{opacity:1}100%{transform:translateY(-30px);opacity:0}}
+  .shoot{stroke-dasharray:80;stroke-dashoffset:80;animation:shoot 6s infinite}
+  @keyframes shoot{0%,78%{stroke-dashoffset:80;opacity:0}82%{opacity:1}100%{stroke-dashoffset:-80;opacity:0}}
+  .flick{animation:flick 1.6s infinite ease-in-out}
+  @keyframes flick{50%{opacity:.55}}
+  .pop{transform-box:fill-box;transform-origin:center;transform:scale(0);animation:popin .6s forwards}
+  @keyframes popin{to{transform:scale(1)}}
+  .draw{animation:drawl 2.4s forwards}
+  @keyframes drawl{to{stroke-dashoffset:0}}
+  .mkpulse{transform-box:fill-box;transform-origin:center;animation:pulse 1.4s infinite}
+  @media (prefers-reduced-motion: reduce){.spin,.smoke,.shimmer,.bob,.flt,.shoot,.twk,.tw,.flick,.mkpulse{animation:none!important}}
+  @media (max-width:560px){
+    body{font-size:18px}.card{padding:20px 18px}.bar{width:96px}
+    .scene,.mapsvg{width:calc(100% + 36px);margin:-20px -18px 16px}
+  }
+</style>
+</head>
+<body>
+<div id="sky"></div>
+
+<div class="wrap">
+  <div class="hud" id="hud">
+    <div class="meter">🔥 FAITH <span class="bar"><i id="faithbar"></i></span></div>
+    <div class="starcount">★ STARS <b id="stars">0</b> / 9</div>
+  </div>
+  <nav class="trail" id="trail" aria-label="Journey progress"><ol id="trailList"></ol></nav>
+  <main id="app"></main>
+</div>
+<button class="mute" id="mute" title="Sound on/off">♪ Sound: On</button>
+
+<script>
+/* =====================================================================
+   BIBLE VERSES — EDIT HERE
+   1. Choose the translation the game shows: "WEB", "ESV", or "NIV".
+   2. For ESV or NIV, paste each verse's text between the backticks ` `
+      on its ESV: or NIV: line. (Quotation marks inside are fine.
+      Just don't use a backtick character.)
+   3. Any verse you leave blank automatically falls back to the WEB
+      (World English Bible, public domain).
+   ===================================================================== */
+const BIBLE_VERSION = "ESV";
+
+const VERSES = [
+  { ref:"Hebrews 11:8",
+    WEB:`By faith, Abraham, when he was called, obeyed to go out to the place which he was to receive for an inheritance. He went out, not knowing where he went.`,
+    ESV:`By faith Abraham obeyed when he was called to go out to a place that he was to receive as an inheritance. And he went out, not knowing where he was going.`, NIV:`` },
+  { ref:"2 Timothy 2:13",
+    WEB:`If we are faithless, he remains faithful; for he can’t deny himself.`,
+    ESV:`if we are faithless, he remains faithful— for he cannot deny himself.`, NIV:`` },
+  { ref:"Genesis 13:8",
+    WEB:`Abram said to Lot, “Please, let there be no strife between me and you, and between my herdsmen and your herdsmen; for we are relatives.”`,
+    ESV:`Then Abram said to Lot, “Let there be no strife between you and me, and between your herdsmen and my herdsmen, for we are kinsmen.”`, NIV:`` },
+  { ref:"Genesis 15:6",
+    WEB:`He believed in Yahweh, who credited it to him for righteousness.`,
+    ESV:`And he believed the LORD, and he counted it to him as righteousness.`, NIV:`` },
+  { ref:"Genesis 16:13",
+    WEB:`She called the name of Yahweh who spoke to her, “You are a God who sees.”`,
+    ESV:`So she called the name of the LORD who spoke to her, “You are a God of seeing,” for she said, “Truly here I have seen him who looks after me.”`, NIV:`` },
+  { ref:"Genesis 18:14",
+    WEB:`Is anything too hard for Yahweh?`,
+    ESV:`Is anything too hard for the LORD? At the appointed time I will return to you, about this time next year, and Sarah shall have a son.`, NIV:`` },
+  { ref:"Genesis 18:25",
+    WEB:`Shouldn’t the Judge of all the earth do right?`,
+    ESV:`Far be it from you to do such a thing, to put the righteous to death with the wicked, so that the righteous fare as the wicked! Far be that from you! Shall not the Judge of all the earth do what is just?`, NIV:`` },
+  { ref:"Genesis 21:6",
+    WEB:`Sarah said, “God has made me laugh. Everyone who hears will laugh with me.”`,
+    ESV:`And Sarah said, “God has made laughter for me; everyone who hears will laugh over me.”`, NIV:`` },
+  { ref:"Genesis 22:8",
+    WEB:`Abraham said, “God will provide himself the lamb for a burnt offering, my son.”`,
+    ESV:`Abraham said, “God will provide for himself the lamb for a burnt offering, my son.” So they went both of them together.`, NIV:`` },
+  { ref:"Galatians 3:29",   /* shown on the final screen */
+    WEB:`If you are Christ’s, then you are Abraham’s offspring and heirs according to promise.`,
+    ESV:`And if you are Christ’s, then you are Abraham’s offspring, heirs according to promise.`, NIV:`` }
+];
+
+/* Copyright notices (required by the publishers when you quote their text).
+   Double-check the exact wording on the publisher's permissions page. */
+const NOTICES = {
+  WEB:"Scripture quotations are from the World English Bible (public domain).",
+  ESV:"Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved.",
+  NIV:"Scripture quotations taken from The Holy Bible, New International Version® NIV®. Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.™ Used by permission. All rights reserved worldwide."
+};
+/* ===================== END OF VERSE SECTION ===================== */
+
+function verse(n){
+  const v=VERSES[n]; const want=BIBLE_VERSION.toUpperCase();
+  const txt=(v[want]||'').trim();
+  return txt ? {t:txt, r:v.ref, ver:want} : {t:v.WEB, r:v.ref, ver:'WEB'};
+}
+function usedVersions(){ return [...new Set(VERSES.map((_,k)=>verse(k).ver))]; }
+const LINKVER = (BIBLE_VERSION.toUpperCase()==='ESV') ? 'ESV' : 'NIV';
+const readLink=p=>`https://www.biblegateway.com/passage/?search=${encodeURIComponent(p)}&version=${LINKVER}`;
+function verseCard(n){
+  const v=verse(n);
+  const note = v.ver==='WEB' ? '' : `<small>${NOTICES[v.ver]}</small>`;
+  return `<div class="verse"><span class="vt">${v.t}</span><cite>${v.r} (${v.ver})</cite>${note}</div>`;
+}
+
+/* ===================== STORY ===================== */
+const CH = [
+ {
+  title:"The Call", ref:"Genesis 12:1–9", place:"Haran", read:"Genesis 12",
+  story:[
+   "Abram lives in Haran with his wife Sarai, his nephew Lot, and everything they own. He is 75 years old, and he and Sarai have no children.",
+   "Then God speaks. Leave your country, your relatives, and your father’s household, and go to a land I will show you. God makes huge promises: He will make Abram into a great nation, make his name great, and bless all the families of the earth through him.",
+   "There’s just one thing God doesn’t say: <em>where</em> the land is."
+  ],
+  prompt:"What should Abram do?",
+  options:[
+   {t:"Pack up and go, even without knowing the destination", faith:true},
+   {t:"Wait until God gives him a map and all the details"},
+   {t:"Stay put. Haran is comfortable and the family is settled"}
+  ],
+  happened:"Abram went, just as the LORD told him. He took Sarai, Lot, their servants and all their possessions and traveled hundreds of miles to Canaan. At Shechem, God promised to give that land to Abram’s offspring, and Abram built an altar to worship Him.",
+  lesson:"Faith doesn’t mean having all the answers. It means trusting the One who does.",
+  quiz:{q:"How old was Abram when he left Haran?", o:["75 years old","40 years old","99 years old","120 years old"], a:0,
+   x:"Genesis 12:4. It’s never too late to start following God."}
+ },
+ {
+  title:"Famine in the Land", ref:"Genesis 12:10–20", place:"Egypt", read:"Genesis 12",
+  story:[
+   "Not long after arriving in Canaan, a severe famine hits. There’s no food, so Abram heads south to Egypt.",
+   "As they approach the border, fear creeps in. Sarai is very beautiful. What if the Egyptians kill Abram so they can take her?"
+  ],
+  prompt:"Abram is afraid. What should he do?",
+  options:[
+   {t:"Tell the truth and trust God to protect them", faith:true},
+   {t:"Tell everyone Sarai is his sister"},
+   {t:"Sneak Sarai into Egypt disguised as a servant"}
+  ],
+  happened:"Abram asked Sarai to say she was his sister. (It was a half-truth; she was his half-sister, Genesis 20:12.) Pharaoh took Sarai into his palace and gave Abram sheep, cattle, donkeys, servants and camels. But God struck Pharaoh’s household with serious diseases. Pharaoh confronted Abram, asking why he hadn’t said she was his wife, and sent them away.",
+  lesson:"Even heroes of faith stumble. The Bible doesn’t hide Abram’s failures, and God kept His promise anyway.",
+  quiz:{q:"How did God protect Sarai in Egypt?", o:["He sent serious diseases on Pharaoh’s household","He sent an angel with a flaming sword","He parted the Nile River","He made Sarai invisible"], a:0,
+   x:"Genesis 12:17. God guarded His promise even when Abram didn’t."}
+ },
+ {
+  title:"Room to Grow", ref:"Genesis 13", place:"Bethel", read:"Genesis 13",
+  story:[
+   "Back in Canaan, God has blessed Abram and Lot so much that the land can’t support all their flocks and herds. Their herdsmen start fighting over grass and water.",
+   "Abram is the elder. He’s the one God called. He could easily claim the best land for himself."
+  ],
+  prompt:"How should Abram settle the fight?",
+  options:[
+   {t:"Let Lot choose first and take whatever is left", faith:true},
+   {t:"Take the best land. God promised it to him anyway"},
+   {t:"Order Lot’s herdsmen to leave with nothing"}
+  ],
+  happened:"Abram told Lot they shouldn’t quarrel, because they were family. He let Lot pick any direction. Lot looked at the lush, well-watered Jordan plain and took it, pitching his tents near Sodom, a city full of wicked people. Then God told Abram to look north, south, east and west: all the land he could see would belong to him and his offspring forever. Abram moved to the oaks of Mamre at Hebron and built another altar.",
+  lesson:"When you trust God to provide, you don’t have to grab for yourself.",
+  quiz:{q:"Where did Lot choose to settle?", o:["The well-watered Jordan plain, near Sodom","The mountains of Moriah","Back home in Ur","The land of Egypt"], a:0,
+   x:"Genesis 13:10–12. It looked like the best choice, but it led Lot toward Sodom."}
+ },
+ {
+  title:"Count the Stars", ref:"Genesis 15", place:"Mamre", read:"Genesis 15",
+  story:[
+   "Years pass. Still no son. Then God speaks to Abram in a vision: Don’t be afraid. I am your shield and your very great reward.",
+   "Abram is honest with God. What good is a reward if he’s still childless? It looks like a servant from his household will inherit everything.",
+   "So God takes Abram outside into the desert night. Look up, He says. Count the stars, if you can. <em>So shall your offspring be.</em>"
+  ],
+  prompt:"Nothing has changed. Abram is still old and still childless. How should he respond?",
+  options:[
+   {t:"Believe God, even though nothing has changed yet", faith:true},
+   {t:"Point out that he and Sarai are way too old"},
+   {t:"Demand proof before believing anything"}
+  ],
+  happened:"Abram believed the LORD, and God counted his faith as righteousness. This is one of the most important verses in the whole Bible. Paul quotes it in Romans 4 and Galatians 3 to show that we are made right with God the same way Abram was: by trusting Him, not by earning it. Then God sealed His promise with a covenant.",
+  lesson:"Faith is believing God’s promise before you can see it.",
+  quiz:{q:"Who did Abram think would inherit everything he owned?", o:["Eliezer of Damascus, his servant","Lot, his nephew","Pharaoh","The king of Sodom"], a:0,
+   x:"Genesis 15:2–3. God answered: a son from your own body will be your heir."}
+ },
+ {
+  title:"The Shortcut", ref:"Genesis 16", place:"Mamre", read:"Genesis 16",
+  story:[
+   "Abram has now lived in Canaan for ten years. Sarai still has no child, and she’s tired of waiting.",
+   "She suggests something common in their culture: Abram could have a child with her Egyptian servant, Hagar, and the child would count as Sarai’s."
+  ],
+  prompt:"What should Abram do?",
+  options:[
+   {t:"Keep waiting for God’s promise in God’s timing", faith:true},
+   {t:"Go along with it. Maybe this is how God will do it"},
+   {t:"Adopt a boy from a neighboring tribe instead"}
+  ],
+  happened:"Abram agreed, and Hagar became pregnant. Then the household fell apart. Hagar looked down on Sarai, Sarai blamed Abram and mistreated Hagar, and Hagar ran away into the desert. But the angel of the LORD found her by a spring, told her to name her son Ishmael, and promised him many descendants. Hagar realized God had seen her all along.",
+  lesson:"Our shortcuts often create pain. But even then, God sees the hurting and the overlooked.",
+  quiz:{q:"What name did Hagar give to God?", o:["The God who sees me","The God who provides","The Mighty One of Jacob","The Lord of Hosts"], a:0,
+   x:"Genesis 16:13. In Hebrew, El Roi."}
+ },
+ {
+  title:"Visitors at Noon", ref:"Genesis 17–18", place:"Mamre", read:"Genesis 18",
+  story:[
+   "Abram is now 99. God appears again and gives him a new name: no longer Abram, but <strong>Abraham</strong>. Sarai becomes <strong>Sarah</strong>. God says that by this time next year, Sarah will have a son, and they are to name him Isaac.",
+   "Later, in the blazing heat of the day, Abraham is sitting at the entrance of his tent. He looks up and sees three men standing nearby."
+  ],
+  prompt:"Three strangers appear in the midday heat. What should Abraham do?",
+  options:[
+   {t:"Run to welcome them and prepare a feast", faith:true},
+   {t:"Stay in the shade. It’s too hot for guests"},
+   {t:"Keep watch. Strangers could be trouble"}
+  ],
+  happened:"Abraham ran to meet them, bowed low, and hurried to throw together a feast. Sarah baked bread and a servant prepared a tender calf. These were no ordinary guests: the LORD Himself had come. One of them said Sarah would have a son by this time next year. Sarah, listening inside the tent, laughed to herself. At her age? The LORD asked why Sarah laughed.",
+  lesson:"God keeps His word even when it sounds impossible, or even laughable.",
+  quiz:{q:"God changed Abram’s name to Abraham. What does Abraham mean?", o:["Father of many nations","Friend of God","Man of the desert","Blessed one"], a:0,
+   x:"Genesis 17:5. God named him by the promise, before it came true."}
+ },
+ {
+  title:"Standing in the Gap", ref:"Genesis 18:16–33", place:"Sodom", read:"Genesis 18",
+  story:[
+   "As the visitors leave, they look out toward Sodom. The LORD tells Abraham that the outcry against Sodom and Gomorrah is great, and their sin is very serious. Judgment is coming.",
+   "Abraham knows his nephew Lot lives there."
+  ],
+  prompt:"What should Abraham do?",
+  options:[
+   {t:"Plead with God to show mercy to the city", faith:true},
+   {t:"Ask God to wipe them out. They deserve it"},
+   {t:"Say nothing. It’s not his business"}
+  ],
+  happened:"Abraham stood before the LORD and asked, would You sweep away the righteous with the wicked? What if there are fifty righteous people in the city? God agreed to spare it. Abraham kept going: 45, 40, 30, 20… and finally 10. Each time God agreed. Sadly, not even ten were found. Sodom was destroyed, but God rescued Lot and his daughters because He remembered Abraham (Genesis 19:29).",
+  lesson:"God invites His friends to pray boldly for others, even for people far from Him.",
+  quiz:{q:"What was the lowest number of righteous people Abraham asked about?", o:["Ten","Fifty","One","Twenty-five"], a:0,
+   x:"Genesis 18:32. God said He would not destroy it for the sake of ten."}
+ },
+ {
+  title:"Laughter", ref:"Genesis 21:1–7", place:"Beersheba", read:"Genesis 21",
+  story:[
+   "Twenty-five years after leaving Haran, God does exactly what He promised. Sarah becomes pregnant and gives birth to a son at the very time God said.",
+   "Remember the name God told Abraham to give him?"
+  ],
+  prompt:"What does Abraham name the baby?",
+  options:[
+   {t:"Isaac, which means “he laughs”", faith:true},
+   {t:"Abraham Jr."},
+   {t:"Eliezer"}
+  ],
+  happened:"Abraham named him Isaac, just as God had said, and circumcised him on the eighth day as God commanded. The laughter of doubt became the laughter of joy. Sarah said God had brought her laughter, and everyone who heard would laugh with her.",
+  lesson:"God’s timing isn’t our timing, but He is never late.",
+  quiz:{q:"How old was Abraham when Isaac was born?", o:["100","75","86","175"], a:0,
+   x:"Genesis 21:5. (He was 86 when Ishmael was born.)"}
+ },
+ {
+  title:"The Test", ref:"Genesis 22:1–19", place:"Moriah", read:"Genesis 22",
+  story:[
+   "Years later, God tests Abraham. Take your son, your only son Isaac, whom you love, and go to the region of Moriah. Offer him there as a burnt offering.",
+   "This is the son of the promise. The one Abraham waited 25 years for. Every promise of God seems to depend on him."
+  ],
+  prompt:"What does Abraham do?",
+  options:[
+   {t:"Get up early the next morning and obey", faith:true},
+   {t:"Argue with God and refuse"},
+   {t:"Hide Isaac and hope God forgets"}
+  ],
+  happened:"Abraham got up early, saddled his donkey, and set out. On the third day he saw the place. Isaac carried the wood and asked, Father, we have the fire and the wood, but where is the lamb? Abraham answered that God Himself would provide it. At the top, Abraham bound Isaac and raised the knife, but the angel of the LORD called out to stop. Abraham looked up and saw a ram caught by its horns in a thicket, and offered it instead. Hebrews 11:19 says Abraham believed God could even raise the dead. Centuries later, God did not spare His own Son (Romans 8:32). Jesus is the Lamb God provided.",
+  lesson:"Abraham was willing to give his son. God actually gave His.",
+  quiz:{q:"What did Abraham name the place where God provided the ram?", o:["The LORD Will Provide","The God Who Sees","Bethel, the House of God","The Well of the Oath"], a:0,
+   x:"Genesis 22:14. In Hebrew, Yahweh Yireh (Jehovah Jireh)."}
+ }
+];
+
+/* Journey map legs, shown before each chapter */
+const LEGS = [
+  {pts:["Ur","Haran"], head:"From Ur to Haran", cap:"Abram’s father Terah moves the family about 600 miles from Ur, up along the Euphrates River, to Haran (Genesis 11:31)."},
+  {pts:["Haran","Shechem","Bethel","Egypt"], head:"Into Canaan… and down to Egypt", cap:"Abram obeys and travels about 400 miles into Canaan, stopping at Shechem and Bethel. Then a famine drives him south to Egypt."},
+  {pts:["Egypt","Bethel"], head:"Back to Bethel", cap:"Abram leaves Egypt a very rich man and returns to Bethel, where he had built an altar."},
+  {pts:["Bethel","Mamre"], head:"Settling at Mamre", cap:"After Lot moves toward Sodom, Abram settles by the great trees of Mamre, near Hebron."},
+  {pts:["Mamre"], head:"Years pass at Mamre…", cap:"Abram has now been in Canaan for ten years, and the promised son still hasn’t come."},
+  {pts:["Mamre"], head:"Thirteen more years…", cap:"Ishmael is now a teenager. Abram is 99 years old."},
+  {pts:["Mamre","Overlook"], head:"Looking toward Sodom", cap:"Abraham walks with his visitors to the hills that look down on Sodom and the Dead Sea valley."},
+  {pts:["Overlook","Beersheba"], head:"South to the Negev", cap:"Abraham moves south into the Negev desert, near Gerar and Beersheba (Genesis 20–21)."},
+  {pts:["Beersheba","Moriah"], head:"A three-day journey", cap:"Abraham and Isaac travel about 50 miles north to the region of Moriah (Genesis 22:4)."}
+];
+
+const RANKS = [
+  {min:16, r:"Friend of God", d:"James 2:23 says Abraham believed God, and he was called God’s friend. You walked the whole journey in faith."},
+  {min:11, r:"Faithful Pilgrim", d:"You know the road and trusted God at most turns. Keep walking!"},
+  {min:6,  r:"Still on the Road", d:"Abraham didn’t get it all right either. Take the journey again and see what you discover."},
+  {min:0,  r:"Just Leaving Haran", d:"Every journey of faith starts with one step. Try again!"}
+];
+
+/* ===================== ART ===================== */
+let SID=0, rs=1;
+const P=n=>Math.round(n*10)/10;
+const seed=n=>{rs=n};
+const rnd=()=>{rs=rs*16807%2147483647;return (rs-1)/2147483646;};
+
+function wrap(sky,inner,label){
+  SID++; const id=SID;
+  return `<svg class="scene" viewBox="0 0 800 300" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${label}">
+  <defs><linearGradient id="sk${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient>
+  <radialGradient id="gl${id}"><stop offset="0" stop-color="#fff7d6" stop-opacity=".95"/><stop offset=".35" stop-color="#ffe9a8" stop-opacity=".45"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
+  <radialGradient id="fi${id}"><stop offset="0" stop-color="#ffb347" stop-opacity=".9"/><stop offset=".4" stop-color="#ff6a2a" stop-opacity=".45"/><stop offset="1" stop-color="#ff4a1a" stop-opacity="0"/></radialGradient></defs>
+  <rect width="800" height="300" fill="url(#sk${id})"/>${inner.replace(/GLOW/g,`url(#gl${id})`).replace(/FIRE/g,`url(#fi${id})`)}</svg>`;
+}
+function starfield(n,maxY,minR=.6,maxR=1.8,sd=7){seed(sd);let s='';for(let k=0;k<n;k++){const r=minR+rnd()*(maxR-minR);s+=`<circle class="twk" cx="${P(rnd()*800)}" cy="${P(rnd()*maxY)}" r="${P(r)}" fill="#fff" style="animation-delay:${P(rnd()*3)}s;animation-duration:${P(2+rnd()*3)}s"/>`;}return s;}
+function glow(x,y,r){return `<circle cx="${x}" cy="${y}" r="${r}" fill="GLOW"/>`;}
+function rays(x,y,len,n=14,c='#fff4c2',op=.22){let s='';for(let k=0;k<n;k++){const a=k*2*Math.PI/n,w=Math.PI/n*0.45;s+=`<path d="M${x} ${y} L${P(x+Math.cos(a-w)*len)} ${P(y+Math.sin(a-w)*len)} L${P(x+Math.cos(a+w)*len)} ${P(y+Math.sin(a+w)*len)}Z" fill="${c}" opacity="${op}"/>`;}return `<g class="spin" style="transform-origin:${x}px ${y}px">${s}</g>`;}
+function sun(x,y,r,c='#fff1b0',withRays=false){return `${withRays?rays(x,y,r*6):''}${glow(x,y,r*3)}<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/>`;}
+function ridge(baseY,amp,color,sd,step=100){seed(sd);let d=`M0 300 L0 ${baseY}`,px=0,py=baseY;for(let x=step;x<=800+step;x+=step){const y=baseY-rnd()*amp;d+=` Q${P(px+step/2)} ${P(Math.min(py,y)-rnd()*amp*.5)} ${x} ${P(y)}`;px=x;py=y;}return `<path d="${d} L${800+step} 300 Z" fill="${color}"/>`;}
+function ground(y1,y2,color){return `<path d="M0 300 L0 ${y1} Q400 ${Math.min(y1,y2)-14} 800 ${y2} L800 300Z" fill="${color}"/>`;}
+function person(x,y,s=1,c='#2a1d14',o={}){
+  const h=y-34*s; let g=`<g fill="${c}">`;
+  g+=`<circle cx="${P(x)}" cy="${P(h)}" r="${P(6.2*s)}"/>`;
+  g+=`<path d="M${P(x-6.5*s)} ${P(h-1*s)} Q${P(x)} ${P(h-10*s)} ${P(x+6.5*s)} ${P(h-1*s)} L${P(x+8.5*s)} ${P(h+10*s)} L${P(x-8.5*s)} ${P(h+10*s)}Z"/>`;
+  g+=`<path d="M${P(x-11*s)} ${P(y)} L${P(x-6*s)} ${P(y-27*s)} Q${P(x)} ${P(y-31*s)} ${P(x+6*s)} ${P(y-27*s)} L${P(x+11*s)} ${P(y)}Z"/>`;
+  if(o.armUp) g+=`<path d="M${P(x+4*s)} ${P(y-25*s)} L${P(x+15*s)} ${P(y-46*s)}" stroke="${c}" stroke-width="${P(3.6*s)}" stroke-linecap="round" fill="none"/>`;
+  if(o.staff) g+=`<path d="M${P(x+13*s)} ${P(y)} L${P(x+13*s)} ${P(y-46*s)} q0 ${P(-6*s)} ${P(-5*s)} ${P(-6*s)}" stroke="${c}" stroke-width="${P(2.4*s)}" fill="none" stroke-linecap="round"/><path d="M${P(x+4*s)} ${P(y-23*s)} L${P(x+13*s)} ${P(y-27*s)}" stroke="${c}" stroke-width="${P(3.2*s)}" stroke-linecap="round"/>`;
+  if(o.baby) g+=`<ellipse cx="${P(x+6*s)}" cy="${P(y-21*s)}" rx="${P(7.5*s)}" ry="${P(4.6*s)}" fill="${o.baby}"/><circle cx="${P(x+12*s)}" cy="${P(y-23*s)}" r="${P(3.2*s)}" fill="#e8c9a0"/>`;
+  return g+'</g>';
+}
+function camel(x,y,s=1,c='#3a2618'){return `<g transform="translate(${x} ${y}) scale(${s})" fill="${c}">
+  <path d="M-26 -34 Q-24 -46 -12 -46 Q-6 -62 4 -50 Q12 -44 20 -40 Q26 -52 28 -66 Q30 -74 38 -74 L46 -72 Q48 -68 42 -66 L38 -64 Q36 -46 28 -32 Q20 -24 8 -24 L-18 -24 Q-26 -26 -26 -34Z"/>
+  <path d="M-26 -34 Q-32 -30 -30 -18" stroke="${c}" stroke-width="2" fill="none"/>
+  <rect x="-20" y="-28" width="4" height="28"/><rect x="-12" y="-28" width="4" height="28"/><rect x="12" y="-28" width="4" height="28"/><rect x="20" y="-28" width="4" height="28"/></g>`;}
+function tent(x,y,w,h,c='#7a4a2a',door='#2b170b',lit=false){return `<g>${lit?glow(x,y-h*.3,w*.75):''}<path d="M${x-w/2} ${y} L${x-w*.12} ${y-h} L${x+w*.12} ${y-h} L${x+w/2} ${y} Z" fill="${c}"/>
+  <path d="M${x-w*.33} ${y} L${x-w*.08} ${y-h*.95}" stroke="#000" stroke-opacity=".18" stroke-width="3"/><path d="M${x+w*.33} ${y} L${x+w*.08} ${y-h*.95}" stroke="#000" stroke-opacity=".18" stroke-width="3"/>
+  <path d="M${x-w*.11} ${y} L${x} ${y-h*.62} L${x+w*.11} ${y} Z" fill="${lit?'#ffcf6a':door}" ${lit?'class="flick"':''}/></g>`;}
+function palm(x,y,h,c='#3d4a22'){const tx=x+8,ty=y-h;const fr=[[-44,8],[-30,-14],[0,-20],[30,-12],[44,10],[-20,20],[22,22]];
+  return `<g><path d="M${x} ${y} Q${x+14} ${y-h/2} ${tx} ${ty}" stroke="#5a3d22" stroke-width="7" fill="none" stroke-linecap="round"/>${fr.map(([dx,dy])=>`<path d="M${tx} ${ty} Q${P(tx+dx*.5)} ${ty+dy-16} ${tx+dx} ${ty+dy}" stroke="${c}" stroke-width="6" fill="none" stroke-linecap="round"/>`).join('')}</g>`;}
+function oak(x,y,s=1,c='#3f5a2a'){return `<g><path d="M${x-6*s} ${y} L${x-4*s} ${y-50*s} L${x+4*s} ${y-50*s} L${x+7*s} ${y}Z" fill="#4a3220"/><circle cx="${x}" cy="${y-70*s}" r="${34*s}" fill="${c}"/><circle cx="${x-28*s}" cy="${y-55*s}" r="${24*s}" fill="${c}"/><circle cx="${x+30*s}" cy="${y-58*s}" r="${26*s}" fill="${c}"/><circle cx="${x+8*s}" cy="${y-92*s}" r="${22*s}" fill="${c}" opacity=".92"/></g>`;}
+function sheep(x,y,s=1){return `<g><rect x="${P(x-6*s)}" y="${P(y-3*s)}" width="${P(2*s)}" height="${P(6*s)}" fill="#3a2a1d"/><rect x="${P(x+4*s)}" y="${P(y-3*s)}" width="${P(2*s)}" height="${P(6*s)}" fill="#3a2a1d"/><ellipse cx="${P(x)}" cy="${P(y-7*s)}" rx="${P(11*s)}" ry="${P(7*s)}" fill="#f4ecdc"/><circle cx="${P(x+11*s)}" cy="${P(y-9*s)}" r="${P(3.8*s)}" fill="#3a2a1d"/></g>`;}
+function flock(cx,cy,n,sd,spread=60){seed(sd);const a=[];for(let k=0;k<n;k++)a.push([cx+(rnd()-.5)*spread*2,cy+(rnd()-.5)*spread*.3,.9+rnd()*.3]);return a.sort((p,q)=>p[1]-q[1]).map(p=>sheep(...p)).join('');}
+function pyramid(x,y,w,a='#e6be7e',b='#c39556'){const h=w*.62;return `<path d="M${x-w/2} ${y} L${x} ${y-h} L${x} ${y}Z" fill="${a}"/><path d="M${x} ${y-h} L${x+w/2} ${y} L${x} ${y}Z" fill="${b}"/>`;}
+function city(x,y,w,c,sd){seed(sd);let s='',cx=x-w/2;while(cx<x+w/2){const bw=14+rnd()*22,bh=18+rnd()*34;s+=`<rect x="${P(cx)}" y="${P(y-bh)}" width="${P(bw)}" height="${P(bh)}" fill="${c}"/>`;if(rnd()<.3)s+=`<rect x="${P(cx+bw/2-5)}" y="${P(y-bh-16)}" width="10" height="16" fill="${c}"/>`;cx+=bw-2;}return s;}
+function smoke(x,y,n=5,c='#3b2b2b'){let s='';for(let k=0;k<n;k++)s+=`<circle class="smoke" cx="${x+(k%2?9:-7)}" cy="${y}" r="${10+k*3}" fill="${c}" style="animation-delay:${P(k*.9)}s"/>`;return s;}
+function bush(x,y,s=1){return `<g fill="#3e5226"><circle cx="${x}" cy="${y-14*s}" r="${18*s}"/><circle cx="${x-18*s}" cy="${y-8*s}" r="${13*s}"/><circle cx="${x+18*s}" cy="${y-8*s}" r="${14*s}"/></g><g stroke="#2a3818" stroke-width="1.5"><path d="M${x-22*s} ${y-20*s} l-8 -8 M${x+20*s} ${y-22*s} l9 -7 M${x} ${y-30*s} l2 -9"/></g>`;}
+function ram(x,y,s=1){return `<g><rect x="${x-10*s}" y="${y-8*s}" width="${3*s}" height="${9*s}" fill="#3a2a1d"/><rect x="${x+7*s}" y="${y-8*s}" width="${3*s}" height="${9*s}" fill="#3a2a1d"/><ellipse cx="${x}" cy="${y-14*s}" rx="${15*s}" ry="${9*s}" fill="#efe4cc"/><ellipse cx="${x+16*s}" cy="${y-19*s}" rx="${6*s}" ry="${5*s}" fill="#4a3826"/><circle cx="${x+13*s}" cy="${y-24*s}" r="${5*s}" fill="none" stroke="#8a6a3a" stroke-width="${3*s}"/></g>`;}
+function altar(x,y,s=1){let st='';const rows=[[-24,-12,0,12,24],[-18,-6,6,18],[-12,0,12]];const cols=['#8f8676','#a39a88','#7d7466'];
+  rows.forEach((r,ri)=>r.forEach((dx,di)=>{st+=`<ellipse cx="${x+dx*s}" cy="${y-(6+ri*11)*s}" rx="${7*s}" ry="${6*s}" fill="${cols[(di+ri)%3]}"/>`;}));
+  return st+`<g stroke="#6b4423" stroke-width="${4*s}" stroke-linecap="round"><path d="M${x-26*s} ${y-36*s} L${x+26*s} ${y-40*s}"/><path d="M${x-22*s} ${y-41*s} L${x+24*s} ${y-36*s}"/></g>`;}
+
+const SCENES = [
+ /* 1 Haran at dawn */
+ ()=>wrap(['#ef9f6a','#fbe2b4'],
+   sun(640,180,38,'#fff0c2') + ridge(200,40,'#d8a477',11) + city(130,212,190,'#9c6644',3) +
+   `<rect x="30" y="196" width="200" height="16" fill="#9c6644"/>` + ridge(236,26,'#c4875a',12,80) +
+   `<g class="bob">${camel(340,262,1,'#4a2e1c')}${person(392,262,1.05,'#4a2e1c',{staff:true})}${camel(462,266,.95,'#4a2e1c')}${person(510,266,1,'#5a2f2f')}${camel(578,270,.9,'#4a2e1c')}</g>` +
+   ground(278,282,'#8a5636'), 'A caravan leaving the walled city of Haran at sunrise'),
+ /* 2 Egypt in famine */
+ ()=>wrap(['#f3c870','#fdf0cc'],
+   sun(400,68,32,'#fffbe6',true) + ridge(214,16,'#e9c58c',21) + pyramid(575,220,170) + pyramid(695,222,110) + pyramid(475,223,70) +
+   `<rect x="0" y="220" width="800" height="12" fill="#5a9ab0" opacity=".9"/><rect class="shimmer" x="0" y="224" width="800" height="2" fill="#cdeaf2"/>` +
+   palm(60,232,62) + palm(320,232,50) + palm(770,232,66) +
+   `<rect x="0" y="232" width="800" height="68" fill="#c9a067"/>
+    <path d="M40 252 l30 12 l-10 14 l40 10 M330 258 l26 8 l12 20 M560 250 l-20 16 l30 10 l-8 18 M660 272 l30 -8 l20 18 M120 286 l40 -6" stroke="#8a6a3e" stroke-width="2" fill="none"/>
+    <g stroke="#9c7a40" stroke-width="2.5" fill="none" stroke-linecap="round"><path d="M430 290 q-4 -22 6 -34"/><path d="M444 290 q2 -20 -8 -30"/><path d="M458 290 q-2 -18 10 -26"/><path d="M700 292 q-4 -20 6 -28"/><path d="M712 292 q4 -16 -6 -26"/></g>` +
+   camel(170,290,1.1,'#5a3a22') + person(250,292,1.4,'#3a2516',{staff:true}) + person(290,292,1.3,'#6a3b3b'), 'Abram and Sarai travel toward the pyramids of Egypt during a famine'),
+ /* 3 Bethel: Lot chooses */
+ ()=>wrap(['#8fc8e6','#eaf4e4'],
+   sun(140,60,24,'#fffbe0') + ridge(186,28,'#b8c48e',31) +
+   glow(680,200,150) + `<path d="M500 214 Q620 194 820 202 L820 250 L500 250Z" fill="#79c05a"/><path d="M520 226 Q650 212 820 220" stroke="#5aa8d6" stroke-width="6" fill="none"/>` +
+   palm(620,212,36,'#3f7a2a') + palm(720,214,42,'#3f7a2a') + city(770,214,60,'#7a8a6a',9) +
+   `<path d="M0 300 L0 212 Q160 168 330 204 Q430 226 480 300Z" fill="#93a85e"/>` + tent(110,230,74,48,'#6a4026') + flock(210,244,7,5) +
+   ground(264,262,'#7c9248') + tent(420,272,84,54,'#5a3a24') + flock(620,286,8,6,80) +
+   person(290,290,1.5,'#3a2516',{armUp:true}) + person(340,290,1.4,'#2f3f5f'), 'Abram lets Lot choose the green Jordan plain while their flocks graze'),
+ /* 4 Count the stars */
+ ()=>wrap(['#050920','#1c2a5c'],
+   `<path d="M-20 130 Q300 30 820 100" stroke="#9fb0ff" stroke-opacity=".09" stroke-width="80" fill="none"/>` +
+   starfield(240,240,.5,1.6,3) + starfield(30,200,1.6,2.8,8) +
+   `<path class="shoot" d="M540 40 l70 24" stroke="#fff" stroke-width="2" stroke-linecap="round"/>` +
+   ridge(248,24,'#121a3a',41) + tent(180,264,112,72,'#2a2340','#120d1e',true) + camel(300,268,.8,'#0d1129') +
+   ground(272,270,'#0b1029') + person(480,286,1.9,'#070a18',{armUp:true}), 'Abram under a sky full of stars'),
+ /* 5 Hagar at the spring */
+ ()=>wrap(['#efb47c','#f9e6c2'],
+   sun(120,130,28,'#fff3cf') + ridge(204,40,'#e3b07a',51) + ridge(240,28,'#d39a62',52) +
+   rays(560,100,260,16,'#fffbe6',.3) + glow(560,110,180) +
+   `<ellipse cx="560" cy="262" rx="74" ry="13" fill="#4f9ec0"/><ellipse class="shimmer" cx="560" cy="260" rx="52" ry="5" fill="#cdeef7"/>` +
+   palm(486,262,72) + palm(642,264,58) + ground(270,270,'#b8804c') + person(410,284,1.55,'#4a2a2a'), 'Hagar alone in the desert by a spring, bathed in light'),
+ /* 6 Visitors at noon */
+ ()=>wrap(['#7fc0e6','#f6edd0'],
+   sun(700,55,28,'#fffbe8',true) + ridge(208,22,'#c7b383',61) + oak(100,252,1.25) + oak(690,244,1.05,'#4a6a30') +
+   tent(250,252,134,82,'#7a4a2a') + ground(252,254,'#c9a874') +
+   `<rect x="352" y="262" width="96" height="6" fill="#6b4423"/><rect x="360" y="268" width="5" height="18" fill="#6b4423"/><rect x="435" y="268" width="5" height="18" fill="#6b4423"/>
+    <ellipse cx="376" cy="259" rx="11" ry="5" fill="#d79a4e"/><ellipse cx="402" cy="258" rx="12" ry="6" fill="#c98a3e"/><circle cx="428" cy="257" r="6" fill="#a63d3d"/>` +
+   glow(575,238,110) + person(530,290,1.45,'#fbf6ea') + person(575,292,1.55,'#fbf6ea') + person(620,290,1.45,'#fbf6ea') +
+   `<g transform="rotate(26 478 292)">${person(478,292,1.4,'#3a2516')}</g>` + person(262,252,.9,'#5a2f2f'), 'Abraham bows to three visitors beside his tent under the oaks of Mamre'),
+ /* 7 Sodom at dusk */
+ ()=>wrap(['#3a1626','#e8653a'],
+   sun(600,205,38,'#ffb067') + ridge(214,14,'#5a2a2a',71) +
+   `<path d="M300 240 Q560 228 820 236 L820 300 L300 300Z" fill="#4a2020"/>` +
+   `<circle cx="590" cy="226" r="120" fill="FIRE"/>` + city(590,240,210,'#220c10',7) + smoke(560,200) + smoke(640,205,5,'#2a1d1d') +
+   `<path d="M0 300 L0 196 Q160 176 300 228 Q340 250 362 300Z" fill="#1e0d14"/>` + glow(190,140,90) +
+   person(180,212,1.6,'#0e0609',{armUp:true}), 'Abraham on a hilltop at dusk, praying over the city of Sodom below'),
+ /* 8 Laughter */
+ ()=>wrap(['#3c2a5a','#f1a46c'],
+   starfield(40,90,.6,1.6,5) + ridge(218,22,'#7a4a58',81) + oak(690,262,1.1,'#3b3a2a') +
+   tent(300,264,184,112,'#6a3b2a','#2a150b',true) + ground(264,268,'#5a3826') +
+   person(470,292,1.6,'#2a1810',{staff:true}) + person(522,292,1.5,'#4a2026',{baby:'#f4ead2'}) +
+   [0,1,2,3,4,5].map(k=>`<text class="flt" x="${500+k*13}" y="${236-k*7}" font-size="15" fill="#ffe08a" style="animation-delay:${P(k*.55)}s">✦</text>`).join(''), 'Abraham and Sarah outside their glowing tent with baby Isaac'),
+ /* 9 Moriah */
+ ()=>wrap(['#ffcf8f','#fff2d8'],
+   rays(400,118,620,18,'#fff7d6',.3) + sun(400,118,34,'#fff7da') + ridge(232,28,'#d9b48a',91) +
+   `<path d="M140 300 L330 152 Q400 136 470 152 L660 300Z" fill="#a98458"/><path d="M330 152 Q400 136 470 152 L505 182 Q400 166 300 176Z" fill="#bb986e"/>` +
+   altar(400,152,1) + person(352,152,1.05,'#3a2516') + person(446,152,.85,'#5a3a22') +
+   ram(538,222,1.25) + bush(580,246,.85) + ground(270,262,'#7d5c3a'), 'Abraham and Isaac beside the altar on Mount Moriah, with a ram caught in a thicket')
+];
+
+const TITLE_SCENE = ()=>wrap(['#050920','#24306a'],
+   `<path d="M-20 140 Q300 40 820 110" stroke="#9fb0ff" stroke-opacity=".1" stroke-width="90" fill="none"/>` +
+   starfield(260,250,.5,1.6,11) + starfield(36,220,1.6,3,12) + `<path class="shoot" d="M200 50 l70 22" stroke="#fff" stroke-width="2" stroke-linecap="round"/>` +
+   `<text x="400" y="128" text-anchor="middle" font-family="Cinzel, Georgia, serif" font-size="58" font-weight="700" fill="#f3e1b4" style="letter-spacing:4px">COUNT THE STARS</text>
+    <text x="400" y="162" text-anchor="middle" font-family="Cinzel, Georgia, serif" font-size="17" fill="#e8b64a" style="letter-spacing:7px">THE JOURNEY OF ABRAHAM</text>` +
+   ridge(246,24,'#131b3c',41) + palm(90,262,70,'#0c1230') + tent(620,266,110,70,'#2a2340','#120d1e',true) + camel(500,270,.8,'#0d1129') +
+   ground(270,272,'#0b1029') + person(330,288,1.8,'#070a18',{armUp:true}), 'Count the Stars title art: Abraham under the night sky');
+
+/* Map */
+const PL={Ur:[680,405,'Ur','r'],Haran:[430,72,'Haran','r'],Shechem:[232,166,'Shechem','r'],Bethel:[224,191,'Bethel','l'],
+  Moriah:[236,210,'Moriah','r'],Mamre:[226,238,'Mamre','l'],Overlook:[245,244,null],Sodom:[266,262,'Sodom','r'],
+  Beersheba:[206,268,'Beersheba','l'],Egypt:[110,350,'Egypt','l']};
+const MAPBASE=`
+ <rect width="800" height="460" fill="#ead3a0"/>
+ <path d="M0 0 H262 Q236 70 226 130 Q214 200 196 262 Q186 290 150 296 Q90 300 40 292 Q14 290 0 300 Z" fill="#86b8cc"/>
+ <path d="M800 372 Q760 392 728 420 Q712 440 700 460 H800Z" fill="#86b8cc"/>
+ <path d="M110 380 Q200 250 240 170 Q330 40 440 60 Q580 90 700 400" stroke="#86a84f" stroke-opacity=".28" stroke-width="64" fill="none" stroke-linecap="round"/>
+ <path d="M92 460 Q100 420 96 390 Q104 350 112 312 M112 312 L98 298 M112 312 L124 299 M112 312 L112 296" stroke="#4f8fb0" stroke-width="3.5" fill="none" stroke-linejoin="round"/>
+ <path d="M420 40 Q470 90 520 170 Q600 280 660 380 L720 425" stroke="#4f8fb0" stroke-width="3" fill="none"/>
+ <path d="M560 30 Q600 120 640 220 Q680 320 722 418" stroke="#4f8fb0" stroke-width="2.5" fill="none"/>
+ <ellipse cx="251" cy="148" rx="5" ry="8" fill="#4f8fb0"/>
+ <path d="M251 156 Q255 190 262 218" stroke="#4f8fb0" stroke-width="2" fill="none"/>
+ <ellipse cx="262" cy="236" rx="7" ry="20" fill="#4f8fb0"/>
+ <g font-family="Cinzel, Georgia, serif" font-weight="700" letter-spacing="3">
+  <text x="70" y="150" font-size="15" fill="#3c6d84" font-style="italic">GREAT SEA</text>
+  <text x="30" y="430" font-size="16" fill="#8a6a3a">EGYPT</text>
+  <text x="300" y="186" font-size="15" fill="#8a6a3a">CANAAN</text>
+  <text x="510" y="300" font-size="16" fill="#8a6a3a" transform="rotate(52 510 300)">MESOPOTAMIA</text>
+  <text x="330" y="380" font-size="14" fill="#b39462">ARABIAN DESERT</text>
+ </g>
+ <g font-family="Crimson Pro, Georgia, serif" font-style="italic" font-size="13" fill="#3c6d84">
+  <text x="476" y="128" transform="rotate(55 476 128)">Euphrates</text>
+  <text x="604" y="110" transform="rotate(70 604 110)">Tigris</text>
+  <text x="60" y="372">Nile</text>
+  <text x="272" y="232">Dead Sea</text>
+ </g>
+ <text x="292" y="84" font-family="Crimson Pro, Georgia, serif" font-style="italic" font-size="13" fill="#5f7a35">The Fertile Crescent</text>
+ <g transform="translate(748 58)"><circle r="22" fill="#f3e3bd" stroke="#8a6a3a"/><path d="M0 -18 L5 0 L0 18 L-5 0Z" fill="#8a6a3a"/><path d="M0 -18 L5 0 L-5 0Z" fill="#a8432e"/><text y="-26" text-anchor="middle" font-family="Cinzel, Georgia, serif" font-size="12" fill="#5c4a33">N</text></g>`;
+function pathD(pts){return pts.map((p,k)=>(k?'L':'M')+PL[p][0]+' '+PL[p][1]).join(' ');}
+function placeMark(k,current){
+  const [x,y,label,side]=PL[k]; if(!label) return '';
+  const tx = side==='r'? x+9 : x-9, anchor = side==='r'?'start':'end';
+  return `<circle cx="${x}" cy="${y}" r="${current?6:4.5}" fill="${current?'#c9302c':'#6a2a1e'}" stroke="#fff8e6" stroke-width="1.5"/>
+  <text x="${tx}" y="${y+4}" text-anchor="${anchor}" font-family="Cinzel, Georgia, serif" font-size="${current?15:12.5}" font-weight="700" fill="#3a2416" stroke="#f3e3bd" stroke-width="3" paint-order="stroke">${label}</text>`;
+}
+
+/* ===================== GAME ===================== */
+let i=0, faith=0, stars=0, sound=true, actx=null;
+const app=document.getElementById('app');
+const $=s=>document.querySelector(s);
+const shuffle=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
+
+(function(){
+  const sky=document.getElementById('sky');
+  for(let n=0;n<110;n++){
+    const s=document.createElement('div'); s.className='tw';
+    const z=Math.random()*2+1;
+    s.style.cssText=`width:${z}px;height:${z}px;left:${Math.random()*100}%;top:${Math.random()*90}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*3}s`;
+    sky.appendChild(s);
+  }
+})();
+
+function tone(freqs){
+  if(!sound) return;
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    freqs.forEach((f,k)=>{
+      const o=actx.createOscillator(), g=actx.createGain();
+      o.type='sine'; o.frequency.value=f;
+      const t=actx.currentTime+k*0.12;
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.18,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.6);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t+0.65);
+    });
+  }catch(e){}
+}
+$('#mute').onclick=()=>{sound=!sound; $('#mute').textContent='♪ Sound: '+(sound?'On':'Off');};
+
+function hud(){
+  $('#faithbar').style.width=(faith/CH.length*100)+'%';
+  $('#stars').textContent=stars;
+  $('#trailList').innerHTML=CH.map((c,k)=>`<li class="${k<i?'done':''} ${k===i?'here':''}"><span class="dot"></span>${c.place}</li>`).join('');
+}
+function flyStar(fromEl){
+  const r=fromEl.getBoundingClientRect(), t=$('#stars').getBoundingClientRect();
+  const s=document.createElement('div'); s.className='flystar'; s.textContent='★';
+  const x0=r.left+r.width/2-16, y0=r.top+r.height/2-28;
+  s.style.left=x0+'px'; s.style.top=y0+'px'; document.body.appendChild(s);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    s.style.transform=`translate(${t.left-x0-10}px,${t.top-y0-20}px) scale(.45) rotate(360deg)`; s.style.opacity='.3';
+  }));
+  setTimeout(()=>{ s.remove(); hud(); const b=$('#stars'); b.classList.add('bump'); setTimeout(()=>b.classList.remove('bump'),220); },870);
+}
+const goTop=()=>window.scrollTo({top:0,behavior:'smooth'});
+
+function title(){
+  $('#hud').classList.remove('on'); $('#trail').classList.remove('on');
+  const vers=usedVersions().join(' + ');
+  app.innerHTML=`<article class="card title">
+    ${TITLE_SCENE()}
+    <div class="sub">AN OLD TESTAMENT JOURNEY · GENESIS 12–22</div>
+    <p>Travel with Abraham from Haran to Mount Moriah. At each stop, choose what faith would do, see what really happened, and answer a Scripture Check to earn a star for your sky.</p>
+    <p class="tiny">9 chapters · about 8 minutes · Verses: ${vers}</p>
+    <div style="margin-top:18px"><button class="btn" id="go">Begin the Journey</button></div>
+  </article>`;
+  $('#go').onclick=()=>{i=0;faith=0;stars=0;tone([392,523]);mapScreen();};
+}
+
+function mapScreen(){
+  $('#hud').classList.add('on'); $('#trail').classList.add('on'); hud();
+  const leg=LEGS[i];
+  const shown=new Set();
+  LEGS.slice(0,i+1).forEach(l=>l.pts.forEach(p=>shown.add(p)));
+  if(i>=6) shown.add('Sodom');
+  const dest=leg.pts[leg.pts.length-1];
+  const prev=LEGS.slice(0,i).filter(l=>l.pts.length>1).map(l=>pathD(l.pts)).join(' ');
+  const moving=leg.pts.length>1;
+  const [dx,dy]=PL[leg.pts[0]];
+  app.innerHTML=`<article class="card">
+    <svg class="mapsvg" viewBox="0 0 800 460" role="img" aria-label="Map of Abraham's journey">
+      ${MAPBASE}
+      ${prev?`<path d="${prev}" stroke="#b5832a" stroke-width="2.5" stroke-dasharray="6 5" fill="none" opacity=".8"/>`:''}
+      ${moving?`<path id="leg" d="${pathD(leg.pts)}" stroke="#c9302c" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`:''}
+      ${[...shown].map(k=>placeMark(k,k===dest||(k==='Sodom'&&dest==='Overlook'))).join('')}
+      <g id="mk" transform="translate(${dx} ${dy})"><g class="${moving?'':'mkpulse'}"><circle r="15" fill="#fff8e6" stroke="#c9302c" stroke-width="2.5"/><text y="6" text-anchor="middle" font-size="17">🐪</text></g></g>
+    </svg>
+    <div class="eyebrow">The Journey · Stop ${i+1} of ${CH.length}</div>
+    <h2>${leg.head}</h2>
+    <p class="maptxt">${leg.cap}</p>
+    <div class="row"><span></span><button class="btn" id="arrive">Arrive at ${CH[i].place} →</button></div>
+  </article>`;
+  goTop();
+  $('#arrive').onclick=()=>{tone([440,523]);chapter();};
+  if(moving){
+    const p=$('#leg'), mk=$('#mk'), L=p.getTotalLength();
+    p.style.strokeDasharray=L; p.style.strokeDashoffset=L;
+    const dur=Math.min(3400,1400+L*6), t0=performance.now();
+    const step=t=>{
+      const k=Math.min(1,(t-t0)/dur), e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+      const pt=p.getPointAtLength(L*e);
+      mk.setAttribute('transform',`translate(${P(pt.x)} ${P(pt.y)})`);
+      p.style.strokeDashoffset=L*(1-e);
+      if(k<1 && document.body.contains(p)) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+}
+
+function chapter(){
+  const c=CH[i];
+  hud();
+  const opts=shuffle(c.options);
+  app.innerHTML=`<article class="card">
+    ${SCENES[i]()}
+    <div class="eyebrow">Chapter ${i+1} of ${CH.length} · ${c.ref}</div>
+    <h2>${c.title}</h2>
+    ${c.story.map(p=>`<p>${p}</p>`).join('')}
+    <div class="prompt">${c.prompt}</div>
+    <div class="choices" id="choices">
+      ${opts.map((o,k)=>`<button class="choice" data-f="${o.faith?1:0}"><span class="k">${'ABC'[k]}</span><span>${o.t}</span></button>`).join('')}
+    </div>
+    <div id="after"></div>
+  </article>`;
+  goTop();
+  document.querySelectorAll('#choices .choice').forEach(b=>b.onclick=()=>decide(b));
+}
+
+function decide(btn){
+  const c=CH[i], good=btn.dataset.f==='1';
+  document.querySelectorAll('#choices .choice').forEach(b=>{ b.disabled=true; if(b.dataset.f==='1') b.classList.add('good'); });
+  btn.classList.add('pick'); if(!good) btn.classList.add('bad');
+  if(good){faith++; tone([440,554,659]);} else tone([330,262]);
+  hud();
+  $('#after').innerHTML=`<div class="reveal">
+    <div class="verdict ${good?'good':'bad'}">${good?'✓ That’s the way of faith! Your faith grows.':'✗ Understandable, but faith would trust God here.'}</div>
+    <div class="what"><h3>WHAT REALLY HAPPENED</h3><p style="margin:0">${c.happened}</p></div>
+    <p><strong>${c.lesson}</strong></p>
+    ${verseCard(i)}
+    <div class="row">
+      <a class="niv" href="${readLink(c.read)}" target="_blank" rel="noopener">📖 Read ${c.read} in the ${LINKVER} ↗</a>
+      <button class="btn" id="toQuiz">Scripture Check ★</button>
+    </div>
+  </div>`;
+  $('#toQuiz').onclick=quiz;
+  $('#after').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function quiz(){
+  const q=CH[i].quiz;
+  const opts=shuffle(q.o.map((t,k)=>({t,ok:k===q.a})));
+  app.innerHTML=`<article class="card">
+    <div class="eyebrow">Chapter ${i+1} · Scripture Check · Win a star</div>
+    <div class="quizhead"><span class="s">★</span><h2 style="margin:0">${q.q}</h2></div>
+    <div class="choices" id="qc" style="margin-top:16px">
+      ${opts.map((o,k)=>`<button class="choice" data-ok="${o.ok?1:0}"><span class="k">${'ABCD'[k]}</span><span>${o.t}</span></button>`).join('')}
+    </div>
+    <div id="qa"></div>
+  </article>`;
+  goTop();
+  document.querySelectorAll('#qc .choice').forEach(b=>b.onclick=()=>{
+    const ok=b.dataset.ok==='1';
+    document.querySelectorAll('#qc .choice').forEach(x=>{x.disabled=true; if(x.dataset.ok==='1') x.classList.add('good');});
+    if(!ok) b.classList.add('bad');
+    if(ok){stars++; tone([523,659,784,1047]); flyStar(b);} else tone([294,247]);
+    const last=i===CH.length-1;
+    $('#qa').innerHTML=`<div class="reveal">
+      <div class="verdict ${ok?'good':'bad'}">${ok?'★ Correct! A star is added to your sky.':'Not quite. No star this time.'}</div>
+      <p>${q.x}</p>
+      <div class="row"><span></span><button class="btn" id="next">${last?'See Your Night Sky ★':'Continue the Journey →'}</button></div>
+    </div>`;
+    $('#next').onclick=()=>{ if(last) ending(); else {i++; mapScreen();} };
+  });
+}
+
+function ending(){
+  i=CH.length; hud();
+  const total=faith+stars, rank=RANKS.find(r=>total>=r.min);
+  const pts=[];
+  for(let k=0;k<stars;k++){ pts.push([P(110+k*(580/Math.max(stars-1,1))), P(95+Math.sin(k*1.7)*38+(k%2)*14)]); }
+  const line = pts.length>1 ? `<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#e8b64a" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="1400" stroke-dashoffset="1400" class="draw" style="animation-delay:${P(.3+stars*.25)}s"/>` : '';
+  const big = pts.map((p,k)=>`<g class="pop" style="animation-delay:${P(.3+k*.25)}s">${glow(p[0],p[1],26)}<text x="${p[0]}" y="${p[1]+9}" text-anchor="middle" font-size="${26+(k%3)*5}" fill="#ffd86a">★</text></g>`).join('');
+  const sky = wrap(['#050920','#2a2a5a'],
+    `<path d="M-20 150 Q300 40 820 120" stroke="#9fb0ff" stroke-opacity=".1" stroke-width="90" fill="none"/>` +
+    starfield(320,260,.4,1.5,21) + line + big +
+    `<g class="pop" style="animation-delay:${P(.6+stars*.25)}s">${glow(400,205,46)}<text x="400" y="220" text-anchor="middle" font-size="44" fill="#ffffff">★</text>
+     <text x="400" y="244" text-anchor="middle" font-family="Cinzel, Georgia, serif" font-size="13" fill="#f3e1b4" style="letter-spacing:3px">THIS ONE IS YOU</text></g>` +
+    ridge(268,14,'#0b1029',61), 'Your night sky of earned stars');
+  const vers=usedVersions();
+  app.innerHTML=`<article class="card">
+    ${sky}
+    <div class="eyebrow">Epilogue · Genesis 25:7–8</div>
+    <h2>Father of Many</h2>
+    <p>Abraham lived to be 175 years old and died full of years. He only ever held one son of the promise. But God was counting stars Abraham couldn’t see yet, and one of them is you.</p>
+    ${verseCard(9)}
+    <div class="rank" style="margin-top:18px">
+      <div class="scores"><div><b>${faith}/9</b><small>FAITH CHOICES</small></div><div><b>${stars}/9</b><small>STARS EARNED</small></div></div>
+      <div class="r">${rank.r}</div>
+      <p>${rank.d}</p>
+    </div>
+    <div class="what discuss"><h3>TALK ABOUT IT</h3>
+      <ol style="margin:0;padding-left:20px">
+        <li>When has God asked you to take a step without showing you the whole plan?</li>
+        <li>Abraham lied about Sarah and took a shortcut with Hagar. Why do you think God included his failures in the Bible?</li>
+        <li>Genesis 15:6 says Abraham was counted righteous because he believed. How is that the same way we are made right with God today?</li>
+        <li>How does the ram on Mount Moriah point forward to Jesus?</li>
+      </ol>
+    </div>
+    <div class="row">
+      <a class="niv" href="${readLink('Genesis 12-25')}" target="_blank" rel="noopener">📖 Read Abraham’s whole story in the ${LINKVER} ↗</a>
+      <button class="btn" id="again">Journey Again</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink2);margin:16px 0 0;line-height:1.4">${vers.map(v=>NOTICES[v]).join('<br>')}</p>
+  </article>`;
+  goTop();
+  tone([392,523,659,784]);
+  $('#again').onclick=title;
+}
+
+title();
+</script>
+</body>
+</html>
